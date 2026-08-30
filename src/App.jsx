@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -91,19 +91,66 @@ function partTotal(part) {
   return part.blocks.reduce((sum, b) => sum + parseSchemeTotal(b.marksScheme), 0);
 }
 
-export default function App() {
-  const [lang, setLang] = useState("en");
-  const [college, setCollege] = useState(bi("DKPUCPA / SRI VIDYA COMPOSITE PU COLLEGE"));
-  const [examTitle, setExamTitle] = useState(bi("FIRST TEST — AUGUST 2026", "ಪ್ರಥಮ ಕಿರು ಪರೀಕ್ಷೆ — ಆಗಸ್ಟ್ 2026"));
-  const [subjectLine, setSubjectLine] = useState(bi("II PUC - ECONOMICS", "ದ್ವಿತೀಯ ಪಿ.ಯು.ಸಿ. — ಅರ್ಥಶಾಸ್ತ್ರ"));
-  const [time, setTime] = useState(bi("1½ Hrs.", "1½ ಗಂಟೆ"));
-  const [instructions, setInstructions] = useState(bi("1. Write the question number visibility within the margin.\n2. Answer for the question should be continuous.", "1. ಪ್ರಶ್ನೆ ಸಂಖ್ಯೆಗಳನ್ನು ಮಾರ್ಜಿನ್‌ನಲ್ಲಿ ಸ್ಪಷ್ಟವಾಗಿ ಬರೆಯಿರಿ.\n2. ಪ್ರಶ್ನೆಗಳ ಉತ್ತರಗಳು ನಿರಂತರವಾಗಿರತಕ್ಕದ್ದು."));
-  const [subjectCode, setSubjectCode] = useState("22");
-  const [maxMarks, setMaxMarks] = useState(40);
+const STORAGE_KEY = "papercraft_saved_data_v1";
 
-  const [parts, setParts] = useState(buildDefaultPaper());
-  const [activePart, setActivePart] = useState(parts[0]?.id || "");
+export default function App() {
+  const savedData = useMemo(() => {
+    try {
+      const item = localStorage.getItem(STORAGE_KEY);
+      return item ? JSON.parse(item) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const [lang, setLang] = useState(savedData?.lang || "en");
+  const [college, setCollege] = useState(savedData?.college || bi("DKPUCPA / SRI VIDYA COMPOSITE PU COLLEGE"));
+  const [examTitle, setExamTitle] = useState(savedData?.examTitle || bi("FIRST TEST — AUGUST 2026", "ಪ್ರಥಮ ಕಿರು ಪರೀಕ್ಷೆ — ಆಗಸ್ಟ್ 2026"));
+  const [subjectLine, setSubjectLine] = useState(savedData?.subjectLine || bi("II PUC - ECONOMICS", "ದ್ವಿತೀಯ ಪಿ.ಯು.ಸಿ. — ಅರ್ಥಶಾಸ್ತ್ರ"));
+  const [time, setTime] = useState(savedData?.time || bi("1½ Hrs.", "1½ ಗಂಟೆ"));
+  const [instructions, setInstructions] = useState(savedData?.instructions || bi("1. Write the question number visibility within the margin.\n2. Answer for the question should be continuous.", "1. ಪ್ರಶ್ನೆ ಸಂಖ್ಯೆಗಳನ್ನು ಮಾರ್ಜಿನ್‌ನಲ್ಲಿ ಸ್ಪಷ್ಟವಾಗಿ ಬರೆಯಿರಿ.\n2. ಪ್ರಶ್ನೆಗಳ ಉತ್ತರಗಳು ನಿರಂತರವಾಗಿರತಕ್ಕದ್ದು."));
+  const [subjectCode, setSubjectCode] = useState(savedData?.subjectCode || "22");
+  const [maxMarks, setMaxMarks] = useState(savedData?.maxMarks || 40);
+
+  const [parts, setParts] = useState(savedData?.parts || buildDefaultPaper());
+  const [activePart, setActivePart] = useState(savedData?.parts?.[0]?.id || parts[0]?.id || "");
   const [mobileTab, setMobileTab] = useState("edit");
+
+  // Continuous auto-save to browser local storage
+  useEffect(() => {
+    const payload = {
+      lang,
+      college,
+      examTitle,
+      subjectLine,
+      time,
+      instructions,
+      subjectCode,
+      maxMarks,
+      parts,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {
+      console.warn("Storage auto-save failed:", err);
+    }
+  }, [lang, college, examTitle, subjectLine, time, instructions, subjectCode, maxMarks, parts]);
+
+  const handleResetPaper = () => {
+    if (window.confirm("Do you want to reset all inputs and start a new paper?")) {
+      localStorage.removeItem(STORAGE_KEY);
+      const defaults = buildDefaultPaper();
+      setCollege(bi("DKPUCPA / SRI VIDYA COMPOSITE PU COLLEGE"));
+      setExamTitle(bi("FIRST TEST — AUGUST 2026", "ಪ್ರಥಮ ಕಿರು ಪರೀಕ್ಷೆ — ಆಗಸ್ಟ್ 2026"));
+      setSubjectLine(bi("II PUC - ECONOMICS", "ದ್ವಿತೀಯ ಪಿ.ಯು.ಸಿ. — ಅರ್ಥಶಾಸ್ತ್ರ"));
+      setTime(bi("1½ Hrs.", "1½ ಗಂಟೆ"));
+      setInstructions(bi("1. Write the question number visibility within the margin.\n2. Answer for the question should be continuous.", "1. ಪ್ರಶ್ನೆ ಸಂಖ್ಯೆಗಳನ್ನು ಮಾರ್ಜಿನ್‌ನಲ್ಲಿ ಸ್ಪಷ್ಟವಾಗಿ ಬರೆಯಿರಿ.\n2. ಪ್ರಶ್ನೆಗಳ ಉತ್ತರಗಳು ನಿರಂತರವಾಗಿರತಕ್ಕದ್ದು."));
+      setSubjectCode("22");
+      setMaxMarks(40);
+      setParts(defaults);
+      setActivePart(defaults[0].id);
+    }
+  };
 
   const updatePart = (id, patch) => setParts((p) => p.map((pt) => (pt.id === id ? { ...pt, ...patch } : pt)));
   const addPart = () => {
@@ -219,11 +266,17 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#F1F5F9", minHeight: "100vh", width: "100%", margin: 0, color: "#0F172A" }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#F1F5F9", minHeight: "100vh", width: "100%", margin: 0, padding: 0, color: "#0F172A", overflowX: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Tinos:wght@400;700&family=Noto+Sans+Kannada:wght@400;500;700&display=swap');
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
+        body, html, #root {
+          width: 100% !important;
+          min-height: 100vh !important;
+          background: #F1F5F9 !important;
+        }
+
         .field-label { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: #475569; margin-bottom: 4px; display: block; }
         .input { width: 100%; padding: 7px 10px; border: 1.5px solid #CBD5E1; border-radius: 6px; font-size: 13px; background: #FFFFFF !important; color: #0F172A !important; outline: none; }
         .input:focus { border-color: #2563EB; }
@@ -238,17 +291,23 @@ export default function App() {
         .toolbtn:hover { border-color: #2563EB; color: #2563EB; background: #F8FAFC; }
         .blockcard { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
         
-        .app-layout { display: flex; width: 100%; gap: 16px; padding: 16px; align-items: flex-start; }
-        .edit-pane { width: 48%; display: flex; flex-direction: column; gap: 12px; }
-        .preview-pane { width: 52%; position: sticky; top: 72px; }
+        .app-layout { 
+          display: flex; 
+          width: 100%; 
+          gap: 16px; 
+          padding: 16px; 
+          align-items: flex-start; 
+        }
+        .edit-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+        .preview-pane { flex: 1; min-width: 0; display: flex; justify-content: center; position: sticky; top: 72px; }
 
         .paper {
           font-family: ${fontFamily};
           color: #000;
           background: #fff;
           width: 100%;
+          max-width: 680px;
           min-height: 840px;
-          margin: 0 auto;
           box-shadow: 0 4px 16px rgba(0,0,0,0.08);
           border-radius: 2px;
           padding: 34px 28px;
@@ -285,6 +344,10 @@ export default function App() {
           </div>
 
           <div className="nav-actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 10px" }} onClick={handleResetPaper} title="Start a fresh question paper">
+              New Paper
+            </button>
+
             <div style={{ display: "flex", border: "1.5px solid #CBD5E1", borderRadius: 6, overflow: "hidden" }}>
               <button className="pill" onClick={() => setLang("en")} style={{ borderRadius: 0, padding: "6px 10px", background: lang === "en" ? "#0F172A" : "#fff", color: lang === "en" ? "#fff" : "#475569" }}>EN</button>
               <button className="pill" onClick={() => setLang("kn")} style={{ borderRadius: 0, padding: "6px 10px", background: lang === "kn" ? "#0F172A" : "#fff", color: lang === "kn" ? "#fff" : "#475569" }}>ಕನ್ನಡ</button>
