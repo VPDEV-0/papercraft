@@ -116,7 +116,6 @@ export default function App() {
   const [activePart, setActivePart] = useState(savedData?.parts?.[0]?.id || parts[0]?.id || "");
   const [mobileTab, setMobileTab] = useState("edit");
 
-  // Continuous auto-save to browser local storage
   useEffect(() => {
     const payload = {
       lang,
@@ -289,6 +288,8 @@ export default function App() {
         .qcard { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
         .toolbtn { background: #fff; border: 1px dashed #94A3B8; border-radius: 6px; padding: 6px 10px; font-size: 11.5px; font-weight: 600; color: #334155; cursor: pointer; }
         .toolbtn:hover { border-color: #2563EB; color: #2563EB; background: #F8FAFC; }
+        .tbl-ctrl-btn { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600; color: #334155; cursor: pointer; }
+        .tbl-ctrl-btn:hover { background: #E2E8F0; color: #0F172A; }
         .blockcard { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
         
         .app-layout { 
@@ -543,6 +544,34 @@ function BlockEditor({ lang, block, numbering, onChange, onRemove, onAddQuestion
 
 function QuestionEditor({ lang, number, q, onChange, onRemove }) {
   const knCls = lang === "kn" ? " input-kn" : "";
+
+  const handleAddColumn = () => {
+    if (!q.table) return;
+    const newColName = `Col ${q.table.cols.length + 1}`;
+    const newCols = [...q.table.cols, newColName];
+    const newRows = q.table.rows.map((row) => [...row, "-"]);
+    onChange({ table: { ...q.table, cols: newCols, rows: newRows } });
+  };
+
+  const handleRemoveColumn = (colIndex) => {
+    if (!q.table || q.table.cols.length <= 1) return;
+    const newCols = q.table.cols.filter((_, i) => i !== colIndex);
+    const newRows = q.table.rows.map((row) => row.filter((_, i) => i !== colIndex));
+    onChange({ table: { ...q.table, cols: newCols, rows: newRows } });
+  };
+
+  const handleAddRow = () => {
+    if (!q.table) return;
+    const emptyNewRow = new Array(q.table.cols.length).fill("-");
+    onChange({ table: { ...q.table, rows: [...q.table.rows, emptyNewRow] } });
+  };
+
+  const handleRemoveRow = (rowIndex) => {
+    if (!q.table || q.table.rows.length <= 1) return;
+    const newRows = q.table.rows.filter((_, i) => i !== rowIndex);
+    onChange({ table: { ...q.table, rows: newRows } });
+  };
+
   return (
     <div className="qcard">
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -573,18 +602,72 @@ function QuestionEditor({ lang, number, q, onChange, onRemove }) {
 
       {q.type === "table" && q.table && (
         <div>
-          <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
             {q.table.cols.map((c, ci) => (
-              <input key={ci} className="input" style={{ fontWeight: 700, fontSize: 11, textAlign: "center" }} value={c} onChange={(e) => { const cols = [...q.table.cols]; cols[ci] = e.target.value; onChange({ table: { ...q.table, cols } }); }} />
+              <div key={ci} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                <input
+                  className="input"
+                  style={{ fontWeight: 700, fontSize: 11, textAlign: "center", padding: "4px 6px" }}
+                  value={c}
+                  onChange={(e) => {
+                    const cols = [...q.table.cols];
+                    cols[ci] = e.target.value;
+                    onChange({ table: { ...q.table, cols } });
+                  }}
+                />
+                {q.table.cols.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveColumn(ci)}
+                    style={{ border: "none", background: "#FEE2E2", color: "#DC2626", borderRadius: 3, fontSize: 9, padding: "1px 0", cursor: "pointer", fontWeight: 700 }}
+                    title="Delete column"
+                  >
+                    ✕ Col
+                  </button>
+                )}
+              </div>
             ))}
+            <div style={{ width: 22 }} />
           </div>
+
           {q.table.rows.map((row, ri) => (
-            <div key={ri} style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+            <div key={ri} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
               {row.map((cell, ci) => (
-                <input key={ci} className="input" style={{ fontSize: 11, textAlign: "center" }} value={cell} onChange={(e) => { const rows = q.table.rows.map((r) => [...r]); rows[ri][ci] = e.target.value; onChange({ table: { ...q.table, rows } }); }} />
+                <input
+                  key={ci}
+                  className="input"
+                  style={{ fontSize: 11, textAlign: "center", padding: "4px 6px", flex: 1 }}
+                  value={cell}
+                  onChange={(e) => {
+                    const rows = q.table.rows.map((r) => [...r]);
+                    rows[ri][ci] = e.target.value;
+                    onChange({ table: { ...q.table, rows } });
+                  }}
+                />
               ))}
+              {q.table.rows.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveRow(ri)}
+                  style={{ width: 22, height: 26, border: "none", background: "#FEE2E2", color: "#DC2626", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 700 }}
+                  title="Delete row"
+                >
+                  ✕
+                </button>
+              ) : (
+                <div style={{ width: 22 }} />
+              )}
             </div>
           ))}
+
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <button type="button" className="tbl-ctrl-btn" onClick={handleAddRow}>
+              + Add Row
+            </button>
+            <button type="button" className="tbl-ctrl-btn" onClick={handleAddColumn}>
+              + Add Column
+            </button>
+          </div>
         </div>
       )}
     </div>
