@@ -50,32 +50,8 @@ const QUESTION_TYPES = [
 ];
 
 function buildDefaultPaper() {
-  const A = emptyPart("A");
-  A.blocks = [
-    { ...emptyBlock("I", "Choose the correct answer.", "1x2=2", "mcq"), questions: [{ ...emptyQuestion("mcq"), marks: 1, text: bi("Which of the following is an example of Micro Economics?"), options: [bi("National Income"), bi("Consumer Behaviour"), bi("Both a and b"), bi("Unemployment")] }] },
-    { ...emptyBlock("II", "Fill in the blanks.", "1x2=2", "fillblank"), wordbank: bi("Iso quant, market, opposite"), questions: [{ ...emptyQuestion("fillblank"), marks: 1, text: bi("The demand for a good moves in the ______ direction of its price.") }] },
-    { ...emptyBlock("III", "Match the following.", "1x3=3", "match"), questions: [{ ...emptyQuestion("match"), marks: 3, matchLeft: [bi("Positive economics"), bi("Indifference map"), bi("SAC")], matchRight: [bi("Short run average cost"), bi("Functioning of mechanism"), bi("A family of indifference curve")] }] },
-    { ...emptyBlock("IV", "Answer in a word or a sentence.", "1x2=2", "oneword"), questions: [{ ...emptyQuestion("oneword"), marks: 1, text: bi("Give an example of a market economy.") }] },
-  ];
-
-  const B = emptyPart("B");
-  B.blocks = [{ ...emptyBlock("V", "Answer any three questions in four sentences each.", "2x3=6", "descriptive"), questions: [{ ...emptyQuestion("descriptive"), marks: 2, text: bi("List out the basic economic activities.") }] }];
-
-  const E = emptyPart("E");
-  E.blocks = [{
-    ...emptyBlock("VIII", "Answer any one of the project oriented questions.", "5x1=5", "table"),
-    questions: [{
-      ...emptyQuestion("table"),
-      marks: 5,
-      text: bi("Find the missing products in the following table:"),
-      table: {
-        cols: ["Factor (L)", "TPL", "MPL", "APL"],
-        rows: [["0", "0", "0", "0"], ["1", "10", "-", "10"], ["2", "22", "-", "-"]],
-      },
-    }],
-  }];
-
-  return [A, B, E];
+  // Demo/sample content removed — website now launches with a single blank Part A.
+  return [emptyPart("A")];
 }
 
 function parseSchemeTotal(schemeStr) {
@@ -572,6 +548,19 @@ function QuestionEditor({ lang, number, q, onChange, onRemove }) {
     onChange({ table: { ...q.table, rows: newRows } });
   };
 
+  // NEW: match-the-following row controls
+  const handleAddMatchRow = () => {
+    if (!q.matchLeft || !q.matchRight) return;
+    onChange({ matchLeft: [...q.matchLeft, bi()], matchRight: [...q.matchRight, bi()] });
+  };
+
+  const handleRemoveMatchRow = (rowIndex) => {
+    if (!q.matchLeft || q.matchLeft.length <= 1) return;
+    const newLeft = q.matchLeft.filter((_, i) => i !== rowIndex);
+    const newRight = q.matchRight.filter((_, i) => i !== rowIndex);
+    onChange({ matchLeft: newLeft, matchRight: newRight });
+  };
+
   return (
     <div className="qcard">
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -590,13 +579,33 @@ function QuestionEditor({ lang, number, q, onChange, onRemove }) {
       )}
 
       {q.type === "match" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {q.matchLeft.map((v, i) => (
-            <div key={i} style={{ display: "flex", gap: 6 }}>
-              <input className={"input" + knCls} placeholder={`A.${i + 1}`} value={v[lang] || ""} onChange={(e) => { const a = q.matchLeft.map((x) => ({ ...x })); a[i][lang] = e.target.value; onChange({ matchLeft: a }); }} />
-              <input className={"input" + knCls} placeholder={`B.${String.fromCharCode(97 + i)}`} value={q.matchRight[i]?.[lang] || ""} onChange={(e) => { const a = q.matchRight.map((x) => ({ ...x })); a[i][lang] = e.target.value; onChange({ matchRight: a }); }} />
-            </div>
-          ))}
+        <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {q.matchLeft.map((v, i) => (
+              <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input className={"input" + knCls} placeholder={`A.${i + 1}`} value={v[lang] || ""} onChange={(e) => { const a = q.matchLeft.map((x) => ({ ...x })); a[i][lang] = e.target.value; onChange({ matchLeft: a }); }} />
+                <input className={"input" + knCls} placeholder={`B.${String.fromCharCode(97 + i)}`} value={q.matchRight[i]?.[lang] || ""} onChange={(e) => { const a = q.matchRight.map((x) => ({ ...x })); a[i][lang] = e.target.value; onChange({ matchRight: a }); }} />
+                {q.matchLeft.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveMatchRow(i)}
+                    style={{ width: 22, height: 26, border: "none", background: "#FEE2E2", color: "#DC2626", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 700, flexShrink: 0 }}
+                    title="Delete row"
+                  >
+                    ✕
+                  </button>
+                ) : (
+                  <div style={{ width: 22, flexShrink: 0 }} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <button type="button" className="tbl-ctrl-btn" onClick={handleAddMatchRow}>
+              + Add Row
+            </button>
+          </div>
         </div>
       )}
 
